@@ -26,6 +26,8 @@ public class Util {
     public static final Operator one_value = (value) -> {return 1-value;};
 
     public static final Operator sigmoid =  (value) -> {return 1/(1+Math.pow(Math.E, -value));};
+
+
     /**
      *
      */
@@ -40,6 +42,8 @@ public class Util {
     public static final OperatorOnTwo plus = (valueA, valueB) -> {return valueA + valueB;};
 
     public static final OperatorOnTwo minus = (valueA, valueB) -> {return valueA - valueB;};
+
+
 
     // Print the Matrix elements
     public static void printMatrix(double[][] matrix){
@@ -183,6 +187,20 @@ public class Util {
         return resultMatrix;
     }
 
+    public static double[][] cloneMatrix(final double[][] matrix) {
+
+        final int m = matrix.length;
+        int n = matrix[0].length;
+        final double[][] outMatrix = new double[m][n];
+
+        for (int i = 0; i < m; i++) {
+            for (int j = 0; j < n; j++) {
+                outMatrix[i][j] = matrix[i][j];
+            }
+        }
+        return outMatrix;
+    }
+
     /**
      * Gaussian generator ,   Updating for Generic type of mean and variance
      * @param mean
@@ -238,12 +256,12 @@ public class Util {
     public static double dtanh(double x) { return 1.- x * x; }
 
     public static double[][] kronecker(final double[][] matrix, final Size scale) {
-        final int m = matrix.length;
-        int n = matrix[0].length;
-        final double[][] outMatrix = new double[m * scale.x][n * scale.y];
+        final int n = matrix.length;
+        int m = matrix[0].length;
+        final double[][] outMatrix = new double[n * scale.x][m * scale.y];
 
-        for (int i = 0; i < m; i++) {
-            for (int j = 0; j < n; j++) {
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < m; j++) {
                 for (int ki = i * scale.x; ki < (i + 1) * scale.x; ki++) {
                     for (int kj = j * scale.y; kj < (j + 1) * scale.y; kj++) {
                         outMatrix[ki][kj] = matrix[i][j];
@@ -253,6 +271,195 @@ public class Util {
         }
         return outMatrix;
     }
+
+    public static double[][] scaleMatrix(final double [][] matrix, final Size scale){
+        final int n = matrix.length;
+        int m = matrix[0].length;
+        int sn = n / scale.x;
+        int sm = m / scale.y;
+        final double[][] outMatrix = new double[sn][sm];
+        int size = scale.x * scale.y;
+        for (int i = 0; i < sn; i++) {
+            for (int j = 0; j < sm; j++) {
+                int sum = 0;
+                for (int si = i * scale.x; si < (i + 1) * scale.x; si++) {
+                    for (int sj = j * scale.y; sj < (j + 1) * scale.y; sj++) {
+                        sum += matrix[si][sj];
+                    }
+                }
+                outMatrix[i][j] = sum / size;
+            }
+        }
+
+        return outMatrix;
+    }
+
+    // 2-D convolution  ,
+    // Valid: return part of the convolution that do not have zero-edges
+    public static double[][] conValid(final double[][] matrix, double[][] kernel){
+        int n = matrix.length;
+        int m = matrix[0].length;
+        int kn = kernel.length;
+        int km = kernel[0].length;
+        int kns = n - kn +1;
+        int kms = m - km +1;
+        double[][] result = new double[kns][kms];
+        for (int ki = 0; ki < kns; ki++) {
+            for (int kj = 0; kj < kms; kj++) {
+                int sum = 0;
+                for (int i = 0; i < kn; i++) {
+                    for (int j = 0; j <km; j++) {
+                        sum += matrix[ki+i][kj+j] * kernel[ki][kj];
+                    }
+                }
+                result[ki][kj] = sum;
+            }
+        }
+
+        return result;
+    }
+
+
+    // 3-D convolution
+    // Valid : return  part of the convolution that do not have zero-edges
+    public static double[][] conValid(final double[][][][] matrix,
+                                        int mapNoX, double[][][][] kernel, int mapNoY) {
+        int m = matrix.length;
+        int n = matrix[0][mapNoX].length;
+        int h = matrix[0][mapNoX][0].length;
+        int km = kernel.length;
+        int kn = kernel[0][mapNoY].length;
+        int kh = kernel[0][mapNoY][0].length;
+        int kms = m - km + 1;
+        int kns = n - kn + 1;
+        int khs = h - kh + 1;
+        final double[][][] outMatrix = new double[kms][kns][khs];
+        for (int i = 0; i < kms; i++) {
+            for (int j = 0; j < kns; j++)
+                for (int k = 0; k < khs; k++) {
+                    double sum = 0.0;
+                    for (int ki = 0; ki < km; ki++) {
+                        for (int kj = 0; kj < kn; kj++)
+                            for (int kk = 0; kk < kh; kk++) {
+                                sum += matrix[i + ki][mapNoX][j + kj][k + kk]
+                                        * kernel[ki][mapNoY][kj][kk];
+                            }
+                    }
+                    outMatrix[i][j][k] = sum;
+                }
+        }
+        return outMatrix[0];
+     }
+
+    // 2-D convolution
+    // Full: return full convolution
+    public static double[][] conFull(final double[][] matrix, double[][] kernel){
+        int n = matrix.length;
+        int m = matrix[0].length;
+        int kn = kernel.length;
+        int km = kernel[0].length;
+        int kns = n + kn - 1;
+        int kms = m + km - 1;
+        double[][] result = new double[kns][kms];
+        fill(result, 0.);
+        for (int ki = 0; ki < kns; ki++) {
+            for (int kj = 0; kj < kms; kj++) {
+                int sum = 0;
+                for (int i = 0; i < kn; i++) {
+                    for (int j = 0; j <km; j++) {
+
+                        if (ki + i <= n && kj + j <= m) sum += matrix[ki + i][kj + j] * kernel[ki][kj];
+
+                    }
+                }
+                result[ki][kj] = sum;
+            }
+        }
+
+        return result;
+    }
+
+    // 3-D convolution
+    // Full : return  the full convolution
+    public static double[][] conFull(final double[][][][] matrix,
+                                        int mapNoX, double[][][][] kernel, int mapNoY) {
+        int m = matrix.length;
+        int n = matrix[0][mapNoX].length;
+        int h = matrix[0][mapNoX][0].length;
+        int km = kernel.length;
+        int kn = kernel[0][mapNoY].length;
+        int kh = kernel[0][mapNoY][0].length;
+        int kms = m + km - 1;
+        int kns = n + kn - 1;
+        int khs = h + kh - 1;
+        final double[][][] outMatrix = new double[kms][kns][khs];
+        for (int i = 0; i < kms; i++) {
+            for (int j = 0; j < kns; j++)
+                for (int k = 0; k < khs; k++) {
+                    double sum = 0.0;
+                    for (int ki = 0; ki < km; ki++) {
+                        for (int kj = 0; kj < kn; kj++)
+                            for (int kk = 0; kk < kh; kk++) {
+                                if ( i + ki <= m && j + kj <= n && k + kk <= h ) sum += matrix[i + ki][mapNoX][j + kj][k + kk]
+                                        * kernel[ki][mapNoY][kj][kk];
+                            }
+                    }
+                    outMatrix[i][j][k] = sum;
+                }
+        }
+        return outMatrix[0];
+    }
+
+    public static double sum(double[][] error) {
+        int m = error.length;
+        int n = error[0].length;
+        double sum = 0.0;
+        for (int i = 0; i < m; i++) {
+            for (int j = 0; j < n; j++) {
+                sum += error[i][j];
+            }
+        }
+        return sum;
+    }
+
+    public static double[][] sum(double[][][][] errors, int j) {
+        int m = errors[0][j].length;
+        int n = errors[0][j][0].length;
+        double[][] result = new double[m][n];
+        for (int mi = 0; mi < m; mi++) {
+            for (int nj = 0; nj < n; nj++) {
+                double sum = 0;
+                for (int i = 0; i < errors.length; i++)
+                    sum += errors[i][j][mi][nj];
+                result[mi][nj] = sum;
+            }
+        }
+        return result;
+    }
+
+    public static void fill(double[][] matrix ,double value){
+        for (int i = 0; i < matrix.length; i++) {
+            for (int j = 0; j < matrix[0].length; j++) {
+                matrix[i][j] = value;
+            }
+        }
+    }
+
+    public static int binaryArray2int(double[] array) {
+        int[] d = new int[array.length];
+        for (int i = 0; i < d.length; i++) {
+            if (array[i] >= 0.500000001)
+                d[i] = 1;
+            else
+                d[i] = 0;
+        }
+        String s = Arrays.toString(d);
+        String binary = s.substring(1, s.length() - 1).replace(", ", "");
+        int data = Integer.parseInt(binary, 2);
+        return data;
+
+    }
+
 
 
 }

@@ -6,6 +6,9 @@ import java.io.Serializable;
 
 /**
  * Created by kingofspace on 2016/7/25.
+ *
+ * Layer in CNN
+ *
  */
 public class Layer {
 
@@ -22,9 +25,13 @@ public class Layer {
 
 
 
-    int recordInBatch = 0;  // batch index
-    int classNum = -1;  // number of class
+    private static int recordInBatch = 0;  // batch index
+    private static int classNum = -1;  // number of class
 
+
+    public static void prepareNewBatch(){ recordInBatch = 0; }
+
+    public static void prepareNewRecord(){ recordInBatch ++;}
 
     public class Size implements Serializable{
         public int x;
